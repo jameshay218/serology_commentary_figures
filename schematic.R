@@ -66,7 +66,7 @@ seir_key <- c("S"="Susceptible","E"="Exposed","I"="Infected","R"="Removed","FOI"
 seir_dat_melt$Compartment <- seir_key[seir_dat_melt$Compartment]
 seir_dat_melt$Compartment <- factor(seir_dat_melt$Compartment,levels=seir_key)
 
-pA <- ggplot(seir_dat_melt) + 
+pB <- ggplot(seir_dat_melt) + 
   geom_line(aes(x=time,y=value,col=Compartment)) +
   scale_color_manual(values=c("black","#403891ff","6b4596ff","#f9a242ff","#5DC863FF")) +
   #scale_color_viridis_d(option="B") +
@@ -76,31 +76,31 @@ pA <- ggplot(seir_dat_melt) +
         panel.grid=element_blank(),
         legend.text=element_text(size=7),
         legend.title=element_text(size=7),
-        axis.text=element_text(size=8),
-        axis.title=element_text(size=8),
+        axis.text=element_text(size=8,color="black"),
+        axis.title=element_text(size=8,color="black"),
         legend.box.background = element_blank(),
         legend.background =  element_rect(color=NA,fill=NA)) +
-  xlab("") +
+  xlab("Time (day)") +
   ylab("Per capita") +
   scale_x_continuous(expand=c(0,0),labels=seq(0,365,by=50),breaks=seq(0,365,by=50)) +
-  labs(tag="A")
-pB <- ggplot(traj_melted) + 
+  labs(tag="B")
+pA <- ggplot(traj_melted) + 
   geom_tile(aes(x=time, y=individual, fill=`Ab titer`),col=NA) + 
   scale_x_continuous(expand=c(0,0),breaks=seq(0,3650,by=500),labels=seq(0,365,by=50)) +
   scale_y_continuous(expand=c(0,0)) +
   scale_fill_viridis_c(option="B",na.value="white") + 
   theme_minimal() +
-  xlab("Time (day)") +
+  xlab("") +
   ylab("Individual") +
   theme(legend.position=c(0,1),
         legend.justification = c(0,1),
         legend.text=element_text(size=7),
         legend.title=element_text(size=7),
-        axis.text=element_text(size=8),
-        axis.title=element_text(size=8),
+        axis.text=element_text(size=8,color="black"),
+        axis.title=element_text(size=8,color="black"),
         legend.box.background = element_rect(color="white",fill="white"))+
-  labs(tag="B")
-left_plot <- pA / pB + plot_layout(heights=c(1,2))
+  labs(tag="A")
+left_plot <- pA / pB + plot_layout(heights=c(2,1))
 
 ## Pretend cross sectional studies etc
 ## pD
@@ -138,7 +138,7 @@ pDi <- ggplot(dat) +
   scale_x_discrete(expand=c(0.2,0.2))+
   xlab("") +
   scale_y_continuous(limits=c(0,0.5))+ 
-  labs(tag="C")
+  labs(tag="D")
 pDii <- ggplot(dat) + 
   geom_bar(aes(x=Study,y=Proportion),stat="identity",width=0.5,fill="black") + 
   scale_y_continuous(limits=c(0,0.5))  +
@@ -194,7 +194,7 @@ pEi <- ggplot(dat) +
     axis.text=element_text(size=8),
     axis.title=element_text(size=8)) +
   scale_y_continuous(limits=c(0,0.5))+ 
-  labs(tag="D")
+  labs(tag="E")
 pEii <- ggplot(dat_titre) + 
   geom_point(aes(x=variable,y=value,group=individual),shape=4,size=1)+
   geom_line(aes(x=variable,y=value,group=individual),size=0.15) +
@@ -212,14 +212,14 @@ pE <- pEi/pEii
 
 top_right <- pD | pE
 
-(left_plot | top_right) + plot_layout(widths=c(1,1.5))
+(left_plot | top_right) + plot_layout(widths=c(1.5,1))
 
 ## Solve the model using both the R and Cpp implementations 
 ab_pars["t_i"] <- 14
 ab_pars["m"] <- 0.01
 ab_pars["ts"] <- 14
 times <- seq(0,75,by=0.1)
-titre_trajectory_cpp <- model_trajectory_cpp(ab_pars,times)
+titre_trajectory_cpp <- model_trajectory(ab_pars,times)
 y <- smooth.spline(titre_trajectory_cpp,spar=0.4)$y
 y[y < 0] <- 0
 trajectory_dat <- data.frame(y=y,time=times,Quantity="Antibody titer")
@@ -230,7 +230,7 @@ y1[y1 < 0] <- 0
 viral_dat <- data.frame(y=y1, time=times, Quantity="LOG10 viral load")
 all_dats <- rbind(trajectory_dat, viral_dat)
 
-pFi <- ggplot(all_dats) + geom_line(aes(x=time, y=y,col=Quantity)) + 
+pCi <- ggplot(all_dats) + geom_line(aes(x=time, y=y,col=Quantity)) + 
   geom_hline(yintercept = 2,linetype="dotted") + 
   ylab("Antibody titer (green)") +
   xlab("Time since infection") +
@@ -244,13 +244,14 @@ pFi <- ggplot(all_dats) + geom_line(aes(x=time, y=y,col=Quantity)) +
     legend.title=element_text(size=7),
     axis.text=element_text(size=8),
     axis.title=element_text(size=8)) +
-  labs(tag="E")
-pFi
+  labs(tag="C")
+pCi
 
-right <- (top_right / pFi) + plot_layout(heights=c(2,1))
+left <- pA / pB + plot_layout(heights=c(2,1))
+right <- (pCi/ top_right) + plot_layout(heights=c(1,2))
 
 pdf("tmp2.pdf",height=7,width=8)
-(left_plot | right) + plot_layout(widths=c(1,1))
+(left | right) + plot_layout(widths=c(1,1))
 dev.off()
 
 png("tmp2.png",height=7,width=8,res=600,units="in")
